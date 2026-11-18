@@ -8,6 +8,7 @@ const { cleanUrl } = require('./src/args');
 const { shouldWelcome, markWelcomed, welcomeText, findShortcuts } = require('./src/firstrun');
 
 let win;
+let isFull = false;
 let nextId = 1;
 const active = new Map();
 
@@ -51,12 +52,16 @@ function createWindow() {
     transparent: true,
     resizable: false,
     maximizable: false,
-    fullscreenable: false,
+    fullscreenable: true,
     hasShadow: false,
     backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   win.setMenuBarVisibility(false);
+  // Состояние ведём сами по событиям: для безрамочного прозрачного окна win.isFullScreen() возвращает false даже в полном экране.
+  const sendState = (full) => { isFull = full; if (win && !win.isDestroyed()) win.webContents.send('window:state', { full }); };
+  win.on('enter-full-screen', () => sendState(true));
+  win.on('leave-full-screen', () => sendState(false));
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
@@ -84,6 +89,13 @@ ipcMain.handle('download:start', async (_e, { id, url, mode }) => {
 ipcMain.handle('download:cancel', (_e, id) => { const j = active.get(id); if (j) j.cancel(); });
 ipcMain.handle('window:close', () => win && win.close());
 ipcMain.handle('window:minimize', () => win && win.minimize());
+ipcMain.handle('window:fullscreen', () => {
+  if (!win) return;
+  // У окна без рамки с resizable:false Windows может не пускать в полный экран, поэтому разрешаем изменение размера на время переключения.
+  win.setResizable(true);
+  win.setFullScreen(!isFull);
+  if (isFull) win.once('leave-full-screen', () => win.setResizable(false));
+});
 ipcMain.handle('folder:open', () => shell.openPath(app.getPath('downloads')));
 
 ipcMain.handle('report:save', () => {

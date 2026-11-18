@@ -98,6 +98,15 @@ $('paste').addEventListener('click', async () => {
 });
 $('close').addEventListener('click', () => window.api.closeWindow());
 $('min').addEventListener('click', () => window.api.minimizeWindow());
+$('full').addEventListener('click', () => window.api.toggleFullscreen());
+// Esc выводит из полного экрана; состояние окна приходит из главного процесса.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('full')) window.api.toggleFullscreen();
+});
+window.api.onWindowState(({ full }) => {
+  document.body.classList.toggle('full', full);
+  $('full').setAttribute('aria-label', full ? 'Свернуть из полного экрана' : 'Во весь экран');
+});
 $('folder').addEventListener('click', () => window.api.openFolder());
 $('report').addEventListener('click', async () => {
   try {

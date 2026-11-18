@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('api', {
   cancel: (id) => ipcRenderer.invoke('download:cancel', id),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  toggleFullscreen: () => ipcRenderer.invoke('window:fullscreen'),
+  onWindowState: (cb) => ipcRenderer.on('window:state', (_e, d) => cb(d)),
   openFolder: () => ipcRenderer.invoke('folder:open'),
   saveReport: () => ipcRenderer.invoke('report:save'),
   onProgress: (cb) => ipcRenderer.on('download:progress', (_e, d) => cb(d)),
