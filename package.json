@@ -1,6 +1,6 @@
 {
   "name": "yt-dlg-2",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Простой скачиватель видео и аудио",
   "main": "main.js",
   "private": true,
@@ -12,9 +12,21 @@
   "build": {
     "appId": "com.el10n666.yt-dlg-2",
     "productName": "Скачать видео",
-    "files": ["main.js", "preload.js", "src/**/*", "renderer/**/*"],
-    "extraResources": [{ "from": "resources/bin", "to": "bin" }],
-    "win": { "target": "nsis" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/bin",
+        "to": "bin"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
@@ -23,7 +35,12 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Скачать видео"
     },
-    "publish": { "provider": "github", "owner": "el10n666", "repo": "yt-dlg-2", "releaseType": "draft" }
+    "publish": {
+      "provider": "github",
+      "owner": "el10n666",
+      "repo": "yt-dlg-2",
+      "releaseType": "draft"
+    }
   },
   "devDependencies": {
     "electron": "^45.3.4",
