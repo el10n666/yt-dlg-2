@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+  <title>Скачать видео</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Скачать видео или музыку</h1>
+  <input id="url" type="text" placeholder="Вставьте ссылку сюда" autofocus>
+  <div class="modes">
+    <label><input type="radio" name="mode" value="video" checked> Видео</label>
+    <label><input type="radio" name="mode" value="audio"> Только звук (MP3)</label>
+  </div>
+  <button id="go">Скачать</button>
+  <ul id="list"></ul>
+  <div class="footer">
+    <button id="folder" class="small">Открыть папку «Загрузки»</button>
+    <button id="report" class="small">Сообщить о проблеме</button>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

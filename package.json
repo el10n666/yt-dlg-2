@@ -7,5 +7,12 @@
   "scripts": {
     "test": "node --test",
     "fetch-bin": "node scripts/fetch-binaries.js"
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }
