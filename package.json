@@ -23,7 +23,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Скачать видео"
     },
-    "publish": { "provider": "github", "owner": "el10n666", "repo": "yt-dlg-2", "releaseType": "release" }
+    "publish": { "provider": "github", "owner": "el10n666", "repo": "yt-dlg-2", "releaseType": "draft" }
   },
   "devDependencies": {
     "electron": "^45.3.4",

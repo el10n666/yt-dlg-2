@@ -92,6 +92,8 @@ test('in fullscreen the compose block keeps its normal width, centred, and downl
   assert.doesNotMatch(css, /body\.full\s+\.compose\s*{[^}]*(zoom|scale)/);
 });
 
-test('release is published, not left as a draft the updater cannot see', () => {
-  assert.strictEqual(pkg.build.publish.releaseType, 'release');
+// Не "release": electron-builder запускает двух издателей параллельно, и второй получает 422 "Published releases must have a valid tag",
+// после чего в релизе остаётся только .blockmap. Черновик избегает гонки; публикуется вручную кнопкой "Publish release".
+test('release is created as a draft to avoid the parallel-publisher 422 race', () => {
+  assert.strictEqual(pkg.build.publish.releaseType, 'draft');
 });
