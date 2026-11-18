@@ -5,6 +5,7 @@ const path = require('node:path');
 const { startDownload } = require('./src/downloader');
 const { resolveYtDlp, updateYtDlp } = require('./src/binaries');
 const { cleanUrl } = require('./src/args');
+const { shouldWelcome, markWelcomed, welcomeText, findShortcuts } = require('./src/firstrun');
 
 let win;
 let nextId = 1;
@@ -96,8 +97,21 @@ ipcMain.handle('report:save', () => {
 
 app.on('before-quit', () => { for (const j of active.values()) j.cancel(); });
 
+// Первый запуск после установки: один раз объясняем, где лежат ярлыки. В режиме разработки не показываем.
+function welcomeOnce() {
+  if (!app.isPackaged || !shouldWelcome(app.getPath('userData'))) return;
+  const text = welcomeText(findShortcuts({
+    desktopDir: app.getPath('desktop'),
+    startMenuDir: path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+  }));
+  markWelcomed(app.getPath('userData')); // сначала маркер: окно не повторится, даже если его закроют аварийно
+  dialog.showMessageBox(win, { type: 'info', title: 'Скачать видео', message: 'Всё готово', detail: text, buttons: ['Понятно'] })
+    .catch((e) => note(`welcome dialog error: ${e.message}`));
+}
+
 app.whenReady().then(() => {
   createWindow();
+  welcomeOnce();
   if (app.isPackaged) {
     // Обновление приложения ставится при закрытии. Ошибки только в журнал.
     const { autoUpdater } = require('electron-updater');
