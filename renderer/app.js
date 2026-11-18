@@ -60,17 +60,32 @@ function showHint(text) {
   $('url').parentElement.classList.toggle('bad', Boolean(text));
 }
 
+let lastId = 0;
+
 async function go() {
   const url = $('url').value.trim();
-  if (!detectPlatform(url)) {
+  if (!/^https?:\/\/\S+$/i.test(url) || !detectPlatform(url)) {
     showHint('Это не похоже на ссылку. Скопируйте адрес видео целиком.');
     return;
   }
   showHint('');
   const mode = document.querySelector('input[name=mode]:checked').value;
-  const id = await window.api.start(url, mode);
+  const id = ++lastId;
+  // Элемент списка создаём до запроса: ответ о быстрой ошибке не потеряется.
   addItem(id, url, mode);
   $('url').value = '';
+  $('go').disabled = true; // защита от двойного нажатия
+  try {
+    await window.api.start(id, url, mode);
+  } catch {
+    const it = items.get(id);
+    it.cancel.remove();
+    it.li.classList.add('fail');
+    it.badge.textContent = '!';
+    it.status.textContent = 'Не удалось начать загрузку. Попробуйте ещё раз';
+  } finally {
+    $('go').disabled = false;
+  }
 }
 
 $('go').addEventListener('click', go);
@@ -85,21 +100,41 @@ $('close').addEventListener('click', () => window.api.closeWindow());
 $('min').addEventListener('click', () => window.api.minimizeWindow());
 $('folder').addEventListener('click', () => window.api.openFolder());
 $('report').addEventListener('click', async () => {
-  await window.api.saveReport();
-  showHint('Файл «отчёт-о-проблеме.txt» лежит на рабочем столе. Отправьте его мне.');
+  try {
+    await window.api.saveReport();
+    showHint('Файл «отчёт-о-проблеме.txt» лежит на рабочем столе. Отправьте его мне.');
+  } catch {
+    showHint('Не удалось сохранить отчёт на рабочий стол. Попробуйте ещё раз.');
+  }
 });
 
-window.api.onProgress(({ id, percent, speed, eta }) => {
+window.api.onProgress(({ id, percent, speed, eta, stage }) => {
   const it = items.get(id);
   if (!it) return;
+  if (stage === 'processing') {
+    // Склейка или конвертация в MP3: процентов нет, но видно, что программа работает.
+    it.bar.style.setProperty('stroke-dashoffset', '0');
+    it.status.textContent = 'Обработка файла…';
+    return;
+  }
+  if (percent == null) { it.status.textContent = 'Скачиваем…'; return; }
   it.bar.style.setProperty('stroke-dashoffset', String(CIRC * (1 - percent / 100)));
-  it.status.textContent = `${Math.round(percent)}% · ${speed} · осталось ${eta}`;
+  const parts = [`${Math.round(percent)}%`];
+  if (speed) parts.push(speed);
+  if (eta) parts.push(`осталось ${eta}`);
+  it.status.textContent = parts.join(' · ');
 });
 
-window.api.onDone(({ id, ok, message }) => {
+window.api.onDone(({ id, ok, cancelled, message }) => {
   const it = items.get(id);
   if (!it) return;
   it.cancel.remove();
+  if (cancelled) { // отмена не ошибка: без красного
+    it.li.classList.add('cancelled');
+    it.badge.textContent = '–';
+    it.status.textContent = message;
+    return;
+  }
   it.li.classList.add(ok ? 'ok' : 'fail');
   if (ok) {
     it.bar.style.setProperty('stroke-dashoffset', '0');

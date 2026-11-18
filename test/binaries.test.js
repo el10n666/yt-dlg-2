@@ -47,6 +47,18 @@ test('updateYtDlp rolls back when the updated binary is broken', async () => {
   assert.strictEqual(fs.readFileSync(userExe, 'utf8'), 'GOOD');
 });
 
+test('updateYtDlp repairs a truncated user exe from the bundled copy', async () => {
+  const { bundledDir, userDir, userExe } = setup();
+  fs.mkdirSync(userDir);
+  fs.writeFileSync(userExe, 'BROKEN');
+  const run = async (exe) => {
+    if (fs.readFileSync(exe, 'utf8') === 'BROKEN') throw new Error('not a valid exe');
+    return '2026.01.01';
+  };
+  assert.strictEqual(await updateYtDlp({ bundledDir, userDir, run }), 'current');
+  assert.strictEqual(fs.readFileSync(userExe, 'utf8'), 'GOOD');
+});
+
 test('updateYtDlp does not throw when offline', async () => {
   const { bundledDir, userDir } = setup();
   const run = async () => { throw new Error('network'); };

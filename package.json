@@ -15,8 +15,8 @@
     "files": ["main.js", "preload.js", "src/**/*", "renderer/**/*"],
     "extraResources": [{ "from": "resources/bin", "to": "bin" }],
     "win": { "target": "nsis" },
-    "nsis": { "oneClick": true, "perMachine": false },
-    "publish": { "provider": "github", "owner": "el10n666", "repo": "yt-dlg-2" }
+    "nsis": { "oneClick": true, "perMachine": false, "artifactName": "yt-dlg-2-Setup-${version}.${ext}" },
+    "publish": { "provider": "github", "owner": "el10n666", "repo": "yt-dlg-2", "releaseType": "release" }
   },
   "devDependencies": {
     "electron": "^45.3.4",

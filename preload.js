@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   clipboardUrl: () => ipcRenderer.invoke('clipboard:url'),
-  start: (url, mode) => ipcRenderer.invoke('download:start', { url, mode }),
+  start: (id, url, mode) => ipcRenderer.invoke('download:start', { id, url, mode }),
   cancel: (id) => ipcRenderer.invoke('download:cancel', id),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),

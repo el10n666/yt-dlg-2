@@ -31,7 +31,7 @@ test('progress lines reach onProgress and exit 0 gives ok', async () => {
   const seen = [];
   const { done } = startDownload(opts, (p) => seen.push(p));
   const proc = f.calls[0].p;
-  proc.stdout.emit('data', Buffer.from('PROG 42.5% 1.2MiB/s 00:31\n'));
+  proc.stdout.emit('data', Buffer.from('PROG| 42.5%|1.2MiB/s|00:31\n'));
   proc.emit('close', 0);
   const r = await done;
   assert.strictEqual(r.ok, true);
@@ -72,6 +72,44 @@ test('link with surrounding whitespace is cleaned and accepted', async () => {
   f.calls[0].p.emit('close', 0);
   assert.strictEqual((await done).ok, true);
   assert.strictEqual(f.calls[0].args[f.calls[0].args.length - 1], 'https://youtu.be/x');
+});
+
+test('processing lines are forwarded as a stage', async () => {
+  const { f, opts } = base();
+  const seen = [];
+  const { done } = startDownload(opts, (p) => seen.push(p));
+  f.calls[0].p.stdout.emit('data', Buffer.from('PP|started\n'));
+  f.calls[0].p.emit('close', 0);
+  await done;
+  assert.deepStrictEqual(seen, [{ stage: 'processing' }]);
+});
+
+test('failure result carries exit code and stderr tail for the support log', async () => {
+  const { f, opts } = base();
+  const { done } = startDownload(opts, () => {});
+  f.calls[0].p.stderr.emit('data', Buffer.from('ERROR: Private video'));
+  f.calls[0].p.emit('close', 1);
+  const r = await done;
+  assert.strictEqual(r.code, 1);
+  assert.ok(r.stderr.includes('Private video'));
+});
+
+test('not enough free space fails before spawning', async () => {
+  const { f, opts } = base({ minFreeBytes: Number.MAX_SAFE_INTEGER });
+  const r = await startDownload(opts, () => {}).done;
+  assert.strictEqual(r.ok, false);
+  assert.strictEqual(r.message, 'Не хватает места на диске');
+  assert.strictEqual(f.calls.length, 0);
+});
+
+test('cancel kills the whole process tree', async () => {
+  const killed = [];
+  const { f, opts } = base({ killTree: (p) => { killed.push(p); p.emit('close', null); } });
+  const { done, cancel } = startDownload(opts, () => {});
+  cancel();
+  await done;
+  assert.strictEqual(killed.length, 1);
+  assert.strictEqual(killed[0], f.calls[0].p);
 });
 
 test('unwritable outDir fails before spawning', async () => {

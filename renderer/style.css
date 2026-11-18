@@ -77,6 +77,8 @@ ul { list-style: none; padding: 0; }
 .sub { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status { font-size: 15px; margin-top: 2px; }
 .item.fail .status { color: var(--accent); font-weight: 600; }
+.item.cancelled .status { color: var(--muted); }
+.item.cancelled .badge { background: var(--muted) !important; }
 .item.ok .status { color: var(--done); font-weight: 600; }
 .cancel { border: 0; background: var(--wash); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; }
 .cancel:hover { background: #e6e7ec; }
