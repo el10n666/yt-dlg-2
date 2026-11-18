@@ -22,8 +22,16 @@ const run = (exe, args) => new Promise((resolve, reject) => {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 720,
-    height: 640,
+    width: 480,
+    height: 740,
+    useContentSize: true,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    hasShadow: false,
+    backgroundColor: '#00000000',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   win.setMenuBarVisibility(false);
@@ -52,8 +60,6 @@ ipcMain.handle('download:start', (_e, { url, mode }) => {
 });
 
 ipcMain.handle('download:cancel', (_e, id) => { const j = active.get(id); if (j) j.cancel(); });
-ipcMain.handle('window:close', () => win && win.close());
-ipcMain.handle('window:minimize', () => win && win.minimize());
 ipcMain.handle('window:close', () => win && win.close());
 ipcMain.handle('window:minimize', () => win && win.minimize());
 ipcMain.handle('folder:open', () => shell.openPath(app.getPath('downloads')));
