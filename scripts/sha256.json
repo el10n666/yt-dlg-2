@@ -1,3 +1,6 @@
 {
-  "ffmpeg": { "url": "", "sha256": "" }
+  "ffmpeg": {
+    "url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-17-12-40/ffmpeg-N-129000-g64f6bcffaf-win64-gpl.zip",
+    "sha256": "187a56f79cbbd9606d6937b9b45eaed8c49fb206272c18f48a14eb2003b7a310"
+  }
 }

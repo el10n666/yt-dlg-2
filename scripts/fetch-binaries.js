@@ -42,8 +42,9 @@ async function fetchFfmpeg(outDir, pins) {
     fs.rmSync(zip);
     throw new Error('ffmpeg: SHA-256 mismatch');
   }
-  // Windows 10 содержит bsdtar, он читает zip.
-  require('node:child_process').execFileSync('tar', ['-xf', zip, '-C', outDir, '--strip-components=2', '--wildcards', '*/bin/ffmpeg.exe']);
+  // Встроенный bsdtar по полному пути: tar из Git Bash (GNU) принимает "C:" за удалённый хост.
+  const bsdtar = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
+  require('node:child_process').execFileSync(bsdtar, ['-xf', zip, '-C', outDir, '--strip-components=2', '*/bin/ffmpeg.exe']);
   fs.rmSync(zip);
 }
 
