@@ -7,18 +7,44 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Скачать видео или музыку</h1>
-  <input id="url" type="text" placeholder="Вставьте ссылку сюда" autofocus>
-  <div class="modes">
-    <label><input type="radio" name="mode" value="video" checked> Видео</label>
-    <label><input type="radio" name="mode" value="audio"> Только звук (MP3)</label>
-  </div>
-  <button id="go">Скачать</button>
-  <ul id="list"></ul>
-  <div class="footer">
-    <button id="folder" class="small">Открыть папку «Загрузки»</button>
-    <button id="report" class="small">Сообщить о проблеме</button>
-  </div>
+  <main class="window">
+    <header class="titlebar">
+      <div class="lights">
+        <button id="close" class="light close" aria-label="Закрыть"></button>
+        <button id="min" class="light min" aria-label="Свернуть"></button>
+        <span class="light off" aria-hidden="true"></span>
+      </div>
+      <span class="title">Скачать видео</span>
+    </header>
+
+    <section class="compose">
+      <h1>Что скачать?</h1>
+      <div class="field">
+        <input id="url" type="text" placeholder="Вставьте ссылку на видео" autocomplete="off" spellcheck="false">
+        <button id="paste" class="paste">Вставить</button>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Формат">
+        <input type="radio" name="mode" id="m-video" value="video" checked>
+        <label for="m-video">Видео</label>
+        <input type="radio" name="mode" id="m-audio" value="audio">
+        <label for="m-audio">Только звук</label>
+      </div>
+      <p id="hint" class="hint" role="alert"></p>
+      <button id="go" class="go">Скачать</button>
+    </section>
+
+    <section class="downloads">
+      <h2>Загрузки</h2>
+      <ul id="list"></ul>
+      <p id="empty" class="empty">Здесь появятся ваши загрузки. Скопируйте ссылку и нажмите «Вставить».</p>
+    </section>
+
+    <footer class="footer">
+      <button id="folder" class="link">Открыть папку «Загрузки»</button>
+      <button id="report" class="link">Сообщить о проблеме</button>
+    </footer>
+  </main>
+  <script src="platform.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

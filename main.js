@@ -52,6 +52,10 @@ ipcMain.handle('download:start', (_e, { url, mode }) => {
 });
 
 ipcMain.handle('download:cancel', (_e, id) => { const j = active.get(id); if (j) j.cancel(); });
+ipcMain.handle('window:close', () => win && win.close());
+ipcMain.handle('window:minimize', () => win && win.minimize());
+ipcMain.handle('window:close', () => win && win.close());
+ipcMain.handle('window:minimize', () => win && win.minimize());
 ipcMain.handle('folder:open', () => shell.openPath(app.getPath('downloads')));
 
 ipcMain.handle('report:save', () => {
