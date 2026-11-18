@@ -28,8 +28,10 @@ button { cursor: pointer; }
 }
 
 /* Заголовок окна в духе macOS: «светофор» слева, название по центру */
-.titlebar { height: 44px; flex: none; background: var(--wash); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 16px; position: relative; -webkit-app-region: drag; }
-.lights { display: flex; gap: 8px; -webkit-app-region: no-drag; }
+.titlebar { height: 44px; flex: none; background: var(--wash); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 16px; position: relative; }
+/* Перетаскивание окна только правее трёх кнопок: на Windows кнопка внутри drag-зоны не принимает клики (HTCAPTION). */
+.drag { position: absolute; top: 0; bottom: 0; left: 88px; right: 0; -webkit-app-region: drag; }
+.lights { display: flex; gap: 8px; position: relative; z-index: 1; }
 .light { width: 13px; height: 13px; border-radius: 50%; border: 0; padding: 0; }
 .close { background: #ff5f57; }
 .min { background: #febc2e; }

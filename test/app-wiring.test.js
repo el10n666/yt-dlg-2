@@ -71,6 +71,17 @@ test('main process toggles fullscreen and tells the renderer the new state', () 
   assert.match(pre, /onWindowState/);
 });
 
+// Кнопки внутри зоны перетаскивания (-webkit-app-region: drag) на Windows получают от системы HTCAPTION (WM_NCHITTEST = 2)
+// и не принимают клики мышью, даже с no-drag. Проверено в настоящем окне. Поэтому зона перетаскивания не должна покрывать кнопки.
+test('window buttons are outside the drag region', () => {
+  assert.doesNotMatch(css, /\.titlebar\s*{[^}]*app-region:\s*drag/);
+  assert.doesNotMatch(css, /\.lights\s*{[^}]*app-region/);
+  assert.match(css, /\.drag\s*{[^}]*app-region:\s*drag/);
+  const left = /\.drag\s*{[^}]*left:\s*(\d+)px/.exec(css);
+  assert.ok(left && Number(left[1]) >= 80, 'drag layer must start to the right of the three buttons');
+  assert.match(html, /<div class="drag"><\/div>/);
+});
+
 test('Escape leaves fullscreen', () => {
   assert.match(app, /Escape/);
 });
