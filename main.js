@@ -63,6 +63,13 @@ ipcMain.handle('report:save', () => {
 
 app.whenReady().then(() => {
   createWindow();
+  if (app.isPackaged) {
+    // Обновление приложения: ставится при закрытии, не посреди скачивания. Ошибки только в лог.
+    const { autoUpdater } = require('electron-updater');
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('error', (e) => note(`app update error: ${e.message}`));
+    autoUpdater.checkForUpdates().catch((e) => note(`app update check failed: ${e.message}`));
+  }
   // Обновление yt-dlp в фоне: ошибки только в лог, пользователю не показываются.
   updateYtDlp({ bundledDir: bundledDir(), userDir: userDir(), run })
     .then((r) => note(`yt-dlp update: ${r}`))
