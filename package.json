@@ -5,6 +5,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "fetch-bin": "node scripts/fetch-binaries.js"
   }
 }
