@@ -105,6 +105,39 @@ test('in fullscreen the compose block keeps its normal width, centred, and downl
 
 // Не "release": electron-builder запускает двух издателей параллельно, и второй получает 422 "Published releases must have a valid tag",
 // после чего в релизе остаётся только .blockmap. Черновик избегает гонки; публикуется вручную кнопкой "Publish release".
+test('advanced section: collapsed block with browser, proxy, playlist, folder and zapret controls', () => {
+  assert.match(html, /<details[^>]*id="adv"/);
+  for (const id of ['opt-browser', 'opt-proxy', 'opt-playlist', 'opt-folder', 'opt-zapret']) {
+    assert.match(html, new RegExp(`id="${id}"`), id);
+  }
+  // Слайдеры вкл/выкл: настоящие чекбоксы со стилем-переключателем, чтобы работали с клавиатуры и читались экранным диктором.
+  assert.match(html, /<input type="checkbox" id="opt-playlist" role="switch"/);
+  assert.match(html, /<input type="checkbox" id="opt-zapret" role="switch"/);
+  assert.match(css, /\.switch/);
+});
+
+// Раскрытый блок «Дополнительно» не должен вытеснять список загрузок: средняя часть окна прокручивается целиком.
+test('compose block and downloads scroll together inside one container', () => {
+  assert.match(html, /<div class="scroll">[\s\S]*<section class="compose">[\s\S]*<section class="downloads">[\s\S]*<\/div>\s*<footer/);
+  assert.match(css, /\.scroll\s*{[^}]*overflow-y:\s*auto/);
+  assert.doesNotMatch(css, /\.downloads\s*{[^}]*overflow-y/);
+});
+
+test('main process loads and saves settings through IPC and picks the folder with a dialog', () => {
+  assert.match(main, /ipcMain\.handle\('settings:get'/);
+  assert.match(main, /ipcMain\.handle\('settings:set'/);
+  assert.match(main, /ipcMain\.handle\('settings:pickFolder'/);
+  assert.match(main, /showOpenDialog/);
+  assert.match(main, /loadSettings/);
+  assert.match(main, /options:/);
+});
+
+test('settings are applied to downloads: folder from settings, never from the renderer', () => {
+  const start = main.slice(main.indexOf("ipcMain.handle('download:start'"), main.indexOf("ipcMain.handle('download:cancel'"));
+  assert.match(start, /settings\.outDir/);
+  assert.doesNotMatch(start, /outDir:\s*(url|mode|id)\b/);
+});
+
 test('release is created as a draft to avoid the parallel-publisher 422 race', () => {
   assert.strictEqual(pkg.build.publish.releaseType, 'draft');
 });

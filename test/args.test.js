@@ -54,6 +54,35 @@ test('parseProgress tolerates unknown speed, eta and percent', () => {
 test('parseProgress recognises a postprocess line', () => {
   assert.deepStrictEqual(parseProgress('PP|started'), { stage: 'processing' });
 });
+test('buildArgs passes a whitelisted browser to --cookies-from-browser', () => {
+  const a = buildArgs({ ...base, mode: 'video', options: { cookiesBrowser: 'firefox' } });
+  assert.strictEqual(a[a.indexOf('--cookies-from-browser') + 1], 'firefox');
+});
+test('buildArgs ignores an unknown or option-like browser value', () => {
+  for (const bad of ['', 'netscape', 'firefox --exec calc', '--version', 'chrome:profile']) {
+    const a = buildArgs({ ...base, mode: 'video', options: { cookiesBrowser: bad } });
+    assert.ok(!a.includes('--cookies-from-browser'), `value "${bad}" must be ignored`);
+  }
+});
+test('buildArgs accepts a proxy and adds http:// when the scheme is missing', () => {
+  const cases = { 'http://127.0.0.1:8080': 'http://127.0.0.1:8080', 'socks5://user:pass@host.example:1080': 'socks5://user:pass@host.example:1080', '127.0.0.1:8080': 'http://127.0.0.1:8080' };
+  for (const [input, expected] of Object.entries(cases)) {
+    const a = buildArgs({ ...base, mode: 'video', options: { proxy: input } });
+    assert.strictEqual(a[a.indexOf('--proxy') + 1], expected, input);
+  }
+});
+test('buildArgs ignores an invalid proxy', () => {
+  for (const bad of ['', '--exec x', 'ftp://host:21', 'two words:80', 'host', 'http://']) {
+    const a = buildArgs({ ...base, mode: 'video', options: { proxy: bad } });
+    assert.ok(!a.includes('--proxy'), `value "${bad}" must be ignored`);
+  }
+});
+test('buildArgs downloads the whole playlist only when asked, the URL stays last', () => {
+  const a = buildArgs({ ...base, mode: 'video', options: { playlist: true } });
+  assert.ok(!a.includes('--no-playlist'));
+  assert.ok(!a.includes('--playlist-items'));
+  assert.strictEqual(a[a.length - 1], base.url);
+});
 test('parseProgress ignores other lines', () => {
   assert.strictEqual(parseProgress('[youtube] Extracting URL'), null);
 });

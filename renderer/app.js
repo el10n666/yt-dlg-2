@@ -88,6 +88,37 @@ async function go() {
   }
 }
 
+// Блок «Дополнительно»: настройки хранятся в главном процессе, здесь только показ и сохранение.
+function advHint(text) { $('adv-hint').textContent = text; }
+
+const folderLabel = (p) => (p ? p.replace(/^.*[\\/]/, '') || p : 'Папка «Загрузки»');
+
+async function loadAdvanced() {
+  const s = await window.api.getSettings();
+  $('opt-playlist').checked = s.playlist;
+  $('opt-zapret').checked = s.zapret;
+  $('opt-browser').value = s.cookiesBrowser;
+  $('opt-proxy').value = s.proxy;
+  $('opt-folder').textContent = folderLabel(s.outDir);
+  $('opt-folder').title = s.outDir || '';
+}
+
+async function save(patch) {
+  try { await window.api.setSettings(patch); advHint(''); }
+  catch { advHint('Не удалось сохранить настройку. Попробуйте ещё раз.'); }
+}
+
+$('opt-playlist').addEventListener('change', (e) => save({ playlist: e.target.checked }));
+$('opt-browser').addEventListener('change', (e) => save({ cookiesBrowser: e.target.value }));
+$('opt-proxy').addEventListener('change', (e) => save({ proxy: e.target.value.trim() }));
+$('opt-folder').addEventListener('click', async () => {
+  try {
+    const s = await window.api.pickFolder();
+    if (s) { $('opt-folder').textContent = folderLabel(s.outDir); $('opt-folder').title = s.outDir; }
+  } catch { advHint('Не удалось выбрать папку. Попробуйте ещё раз.'); }
+});
+loadAdvanced().catch(() => advHint('Не удалось прочитать настройки.'));
+
 $('go').addEventListener('click', go);
 $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
 $('url').addEventListener('input', () => showHint(''));

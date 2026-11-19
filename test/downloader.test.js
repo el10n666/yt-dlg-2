@@ -112,6 +112,16 @@ test('cancel kills the whole process tree', async () => {
   assert.strictEqual(killed[0], f.calls[0].p);
 });
 
+test('user options reach the yt-dlp command line', async () => {
+  const { f, opts } = base({ options: { cookiesBrowser: 'firefox', proxy: '127.0.0.1:8080', playlist: false } });
+  const { done } = startDownload(opts, () => {});
+  const a = f.calls[0].args;
+  assert.strictEqual(a[a.indexOf('--cookies-from-browser') + 1], 'firefox');
+  assert.strictEqual(a[a.indexOf('--proxy') + 1], 'http://127.0.0.1:8080');
+  f.calls[0].p.emit('close', 0);
+  await done;
+});
+
 test('unwritable outDir fails before spawning', async () => {
   const { f, opts } = base({ outDir: path.join(os.tmpdir(), 'ytdlg-no', 'a\0b') });
   const r = await startDownload(opts, () => {}).done;

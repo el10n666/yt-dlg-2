@@ -23,7 +23,7 @@ function freeBytes(dir) {
   }
 }
 
-function startDownload({ url, mode, outDir, ytdlp, ffmpegDir, spawn, minFreeBytes = MIN_FREE, killTree = defaultKillTree }, onProgress) {
+function startDownload({ url, mode, outDir, ytdlp, ffmpegDir, spawn, options = {}, minFreeBytes = MIN_FREE, killTree = defaultKillTree }, onProgress) {
   const clean = cleanUrl(url);
   if (!clean) return fail('Это не похоже на ссылку. Скопируйте адрес видео целиком');
   try {
@@ -34,7 +34,7 @@ function startDownload({ url, mode, outDir, ytdlp, ffmpegDir, spawn, minFreeByte
   }
   if (freeBytes(outDir) < minFreeBytes) return fail(NO_SPACE);
 
-  const args = buildArgs({ url: clean, mode, outDir, ffmpegDir });
+  const args = buildArgs({ url: clean, mode, outDir, ffmpegDir, options });
   const proc = spawn(ytdlp, args, { env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, windowsHide: true });
   let stderr = '';
   let cancelled = false;

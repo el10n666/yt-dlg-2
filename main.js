@@ -6,6 +6,7 @@ const { startDownload } = require('./src/downloader');
 const { resolveYtDlp, updateYtDlp } = require('./src/binaries');
 const { cleanUrl } = require('./src/args');
 const { shouldWelcome, markWelcomed, welcomeText, findShortcuts } = require('./src/firstrun');
+const { loadSettings, saveSettings } = require('./src/settings');
 
 let win;
 let isFull = false;
@@ -70,13 +71,16 @@ ipcMain.handle('clipboard:url', () => cleanUrl(clipboard.readText()));
 // id выдаёт интерфейс заранее: быстрые ошибки не теряются, элемент списка уже существует.
 ipcMain.handle('download:start', async (_e, { id, url, mode }) => {
   await withTimeout(updateReady, 20000);
+  // Настройки читаются из файла в главном процессе: интерфейс не может подставить папку или аргументы.
+  const settings = loadSettings(app.getPath('userData'));
   const job = startDownload({
     url,
     mode: mode === 'audio' ? 'audio' : 'video',
-    outDir: app.getPath('downloads'),
+    outDir: settings.outDir || app.getPath('downloads'),
     ytdlp: resolveYtDlp({ bundledDir: bundledDir(), userDir: userDir() }),
     ffmpegDir: bundledDir(),
     spawn,
+    options: { cookiesBrowser: settings.cookiesBrowser, proxy: settings.proxy, playlist: settings.playlist },
   }, (p) => win && win.webContents.send('download:progress', { id, ...p }));
   active.set(id, job);
   job.done.then((r) => {
@@ -96,7 +100,17 @@ ipcMain.handle('window:fullscreen', () => {
   win.setFullScreen(!isFull);
   if (isFull) win.once('leave-full-screen', () => win.setResizable(false));
 });
-ipcMain.handle('folder:open', () => shell.openPath(app.getPath('downloads')));
+ipcMain.handle('settings:get', () => loadSettings(app.getPath('userData')));
+ipcMain.handle('settings:set', (_e, patch) => {
+  const next = { ...loadSettings(app.getPath('userData')), ...(patch && typeof patch === 'object' ? patch : {}) };
+  return saveSettings(app.getPath('userData'), next);
+});
+ipcMain.handle('settings:pickFolder', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'Куда сохранять', properties: ['openDirectory', 'createDirectory'], defaultPath: app.getPath('downloads') });
+  if (r.canceled || !r.filePaths[0]) return null;
+  return saveSettings(app.getPath('userData'), { ...loadSettings(app.getPath('userData')), outDir: r.filePaths[0] });
+});
+ipcMain.handle('folder:open', () => shell.openPath(loadSettings(app.getPath('userData')).outDir || app.getPath('downloads')));
 
 ipcMain.handle('report:save', () => {
   const file = path.join(app.getPath('desktop'), 'отчёт-о-проблеме.txt');

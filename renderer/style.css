@@ -41,6 +41,7 @@ button { cursor: pointer; }
 .close:hover, .min:hover, .full-btn:hover { filter: brightness(.9); }
 .title { position: absolute; left: 0; right: 0; text-align: center; font-size: 14px; font-weight: 600; color: var(--muted); pointer-events: none; }
 
+.scroll { flex: 1; min-height: 0; overflow-y: auto; }
 .compose { padding: 24px 24px 8px; flex: none; }
 h1 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 16px; }
 
@@ -63,7 +64,38 @@ h1 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 1
 .go:hover { background: #2c2e38; }
 .go:active { transform: scale(.98); }
 
-.downloads { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 24px 0; }
+.downloads { padding: 14px 24px 12px; }
+
+/* Блок «Дополнительно» */
+.adv { margin-top: 14px; border-top: 1px solid var(--line); }
+.adv summary { cursor: pointer; padding: 12px 0; font-weight: 600; color: var(--muted); list-style: none; }
+.adv summary::-webkit-details-marker { display: none; }
+.adv summary::after { content: '▾'; float: right; transition: transform .15s; }
+.adv[open] summary::after { transform: rotate(180deg); }
+.adv summary:hover { color: var(--ink); }
+.adv-body { padding-bottom: 6px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; cursor: pointer; }
+.row-text { display: flex; flex-direction: column; min-width: 0; }
+.row-title { font-weight: 600; }
+.row-sub { font-size: 14px; color: var(--muted); font-weight: 500; }
+.row-sub.err { color: var(--accent); font-weight: 600; }
+
+/* Слайдер вкл/выкл: настоящий чекбокс, поэтому работает с клавиатуры (Пробел) */
+.switch { position: relative; width: 52px; height: 32px; flex: none; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.switch .knob { position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: background .15s; pointer-events: none; }
+.switch .knob::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .15s; }
+.switch input:checked + .knob { background: var(--ink); }
+.switch input:checked + .knob::after { transform: translateX(20px); }
+.switch input:focus-visible + .knob { outline: 3px solid #1a73e8; outline-offset: 2px; }
+.switch input:disabled + .knob { opacity: .5; }
+
+.field-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 0; }
+.field-row label { font-weight: 600; flex: none; }
+.field-row select, .field-row input, .pick { min-width: 0; width: 220px; background: var(--wash); border: 2px solid transparent; border-radius: 10px; padding: 9px 12px; font-size: 16px; }
+.field-row select:focus, .field-row input:focus { background: var(--paper); border-color: var(--ink); outline: 0; }
+.pick { text-align: left; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick:hover { background: #ececf0; }
 h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
 ul { list-style: none; padding: 0; }
 .empty { color: var(--muted); font-size: 16px; padding-top: 4px; }

@@ -18,6 +18,7 @@
       <span class="title">Скачать видео</span>
     </header>
 
+    <div class="scroll">
     <section class="compose">
       <h1>Что скачать?</h1>
       <div class="field">
@@ -32,6 +33,41 @@
       </div>
       <p id="hint" class="hint" role="alert"></p>
       <button id="go" class="go">Скачать</button>
+
+      <details id="adv" class="adv">
+        <summary>Дополнительно</summary>
+        <div class="adv-body">
+          <label class="row" for="opt-playlist">
+            <span class="row-text"><span class="row-title">Скачивать весь плейлист</span><span class="row-sub">Если выключено, берётся одно видео</span></span>
+            <span class="switch"><input type="checkbox" id="opt-playlist" role="switch"><span class="knob"></span></span>
+          </label>
+          <label class="row" for="opt-zapret">
+            <span class="row-text"><span class="row-title">Обход блокировок</span><span id="zapret-sub" class="row-sub">Для YouTube и Discord. Windows спросит разрешение</span></span>
+            <span class="switch"><input type="checkbox" id="opt-zapret" role="switch"><span class="knob"></span></span>
+          </label>
+          <div class="field-row">
+            <label for="opt-browser">Войти через браузер</label>
+            <select id="opt-browser">
+              <option value="">Не нужно</option>
+              <option value="chrome">Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="firefox">Firefox</option>
+              <option value="opera">Opera</option>
+              <option value="brave">Brave</option>
+              <option value="vivaldi">Vivaldi</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label for="opt-proxy">Прокси</label>
+            <input id="opt-proxy" type="text" placeholder="адрес:порт" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field-row">
+            <label for="opt-folder">Куда сохранять</label>
+            <button id="opt-folder" class="pick" type="button">Папка «Загрузки»</button>
+          </div>
+          <p id="adv-hint" class="hint" role="alert"></p>
+        </div>
+      </details>
     </section>
 
     <section class="downloads">
@@ -39,6 +75,7 @@
       <ul id="list"></ul>
       <p id="empty" class="empty">Здесь появятся ваши загрузки. Скопируйте ссылку и нажмите «Вставить».</p>
     </section>
+    </div>
 
     <footer class="footer">
       <button id="folder" class="link">Открыть папку «Загрузки»</button>
