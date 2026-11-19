@@ -208,7 +208,7 @@ function rollbackZapret(userDir) {
 // ---------- Автоподбор стратегии ----------
 // start/stop/check/wait подставляются снаружи: в тестах это заглушки, в приложении настоящий запуск и проверка сети.
 
-async function pickStrategy({ names, preferred, start, stop, check, wait, onProgress, isCancelled }) {
+async function pickStrategy({ names, preferred, start, stop, check, wait, onProgress, isCancelled, onAttempt = () => {} }) {
   const order = orderStrategies(names, preferred);
   let best = null;
   for (let i = 0; i < order.length; i++) {
@@ -219,6 +219,7 @@ async function pickStrategy({ names, preferred, start, stop, check, wait, onProg
       await start(name);
       await wait();
       const r = await check();
+      onAttempt({ name, passed: r.passed, total: r.total, failed: r.failed || [] }); // в журнал: что пробовали и что не прошло
       if (r.total > 0 && r.passed === r.total) return { name, partial: false }; // рабочая стратегия остаётся включённой
       if (r.passed > 0 && (!best || r.passed > best.passed)) best = { name, passed: r.passed };
     } catch {

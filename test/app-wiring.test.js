@@ -158,6 +158,21 @@ test('zapret slider is wired: on/off IPC, status events, elevated launch, quit o
   assert.match(app, /\$\('opt-zapret'\)\.addEventListener\('change'/);
 });
 
+test('zapret refuses to start under a VPN, before asking for administrator rights, and says why', () => {
+  const on = main.slice(main.indexOf('async function zapretOn'), main.indexOf('async function zapretOff'));
+  assert.match(on, /detectVpn\(/);
+  assert.ok(on.indexOf('detectVpn(') < on.indexOf('createSession('), 'VPN check must come before the UAC prompt');
+  assert.match(on, /VPN/);
+});
+
+test('zapret check downloads a real video chunk and every attempt is written to the log', () => {
+  const on = main.slice(main.indexOf('async function zapretOn'), main.indexOf('async function zapretOff'));
+  assert.match(on, /checkAll\(/);
+  assert.match(on, /parseDirectUrl\(/);
+  assert.match(on, /onAttempt/);
+  assert.match(on, /note\(`zapret attempt/);
+});
+
 test('zapret is bundled into the installer from resources/zapret', () => {
   assert.ok(pkg.build.extraResources.some((r) => r.from === 'resources/zapret' && r.to === 'zapret'));
 });

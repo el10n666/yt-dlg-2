@@ -95,4 +95,76 @@ async function checkTargets({ targets = DEFAULT_TARGETS, fetchFn = httpProbe, ti
   return { passed: results.filter(Boolean).length, total: targets.length, failed };
 }
 
-module.exports = { validateHelperCommand, buildElevatedLaunch, checkTargets, httpProbe, DEFAULT_TARGETS, MAX_ARGS };
+// ---------- Проверка настоящего скачивания видео ----------
+// Раньше проверка считала успехом любой HTTP-ответ, и «Включено» появлялось сразу, хотя видеопоток googlevideo.com мог не идти.
+// Теперь берём настоящий кусок видео (первые байты по Range) и требуем, чтобы он пришёл целиком и достаточно быстро.
+
+async function measureThroughput({ url, bytes = 2 * 1024 * 1024, timeoutMs = 8000, fetchFn = fetch }) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let got = 0;
+  let reader;
+  const stalled = new Promise((resolve) => ctrl.signal.addEventListener('abort', () => resolve('timeout')));
+  try {
+    const res = await Promise.race([
+      fetchFn(url, { headers: { Range: `bytes=0-${bytes - 1}` }, signal: ctrl.signal }),
+      stalled.then(() => { throw new Error('timeout'); }),
+    ]);
+    if (!res || (res.status !== 200 && res.status !== 206)) return { ok: false, bytes: 0, reason: `http ${res && res.status}` };
+    // Файл может быть меньше пробы: тогда сервер сообщает полный размер в Content-Range ("bytes 0-433080/433081"),
+    // и цель это весь файл, а не запрошенные мегабайты.
+    let want = bytes;
+    const cr = res.headers && typeof res.headers.get === 'function' ? res.headers.get('content-range') : null;
+    const total = cr && /\/(\d+)$/.exec(cr);
+    if (total) want = Math.min(bytes, Number(total[1]));
+    reader = res.body.getReader();
+    while (got < want) {
+      const next = await Promise.race([reader.read(), stalled.then(() => ({ timeout: true }))]);
+      if (next.timeout) return { ok: false, bytes: got, reason: 'timeout' };
+      if (next.done) break;
+      got += next.value.length;
+    }
+    return got >= want ? { ok: true, bytes: got } : { ok: false, bytes: got, reason: 'short' };
+  } catch (e) {
+    return { ok: false, bytes: got, reason: e.message === 'timeout' ? 'timeout' : String(e.message || e) };
+  } finally {
+    clearTimeout(timer);
+    if (reader) { try { await reader.cancel(); } catch { /* поток уже закрыт */ } }
+  }
+}
+
+// Прямая ссылка на видеопоток из вывода yt-dlp -g: только https и только googlevideo.com, остальное отбрасывается.
+function parseDirectUrl(output) {
+  for (const raw of String(output || '').split(/\r?\n/)) {
+    const line = raw.trim();
+    try {
+      const u = new URL(line);
+      if (u.protocol === 'https:' && (u.hostname === 'googlevideo.com' || u.hostname.endsWith('.googlevideo.com'))) return line;
+    } catch { /* не ссылка */ }
+  }
+  return null;
+}
+
+// Проверка узлов и, если есть ссылка, реальное скачивание видео. Провал скачивания считается отдельной проверкой.
+async function checkAll({ targets = DEFAULT_TARGETS, fetchFn = httpProbe, timeoutMs = 6000, videoUrl = null, measure = measureThroughput } = {}) {
+  const hosts = await checkTargets({ targets, fetchFn, timeoutMs });
+  if (!videoUrl) return hosts;
+  const video = await measure({ url: videoUrl });
+  return {
+    passed: hosts.passed + (video.ok ? 1 : 0),
+    total: hosts.total + 1,
+    failed: video.ok ? hosts.failed : [...hosts.failed, 'video-download'],
+  };
+}
+
+// VPN и туннели: по имени сетевого адаптера. Обход блокировок против VPN не работает (трафик уже зашифрован и идёт мимо провайдера).
+const VPN_NAME = /^(tun\d*|tap\d*|wg\d*|utun\d*)$|wireguard|openvpn|\bvpn\b|warp|nord|proton|happ|v2ray|xray|clash|sing-?box|hiddify|outline|amnezia|tailscale|zerotier|hamachi|mullvad|surfshark|expressvpn/i;
+
+function detectVpn(interfaces) {
+  for (const [name, addrs] of Object.entries(interfaces || {})) {
+    if (VPN_NAME.test(name) && Array.isArray(addrs) && addrs.some((a) => !a.internal)) return name;
+  }
+  return null;
+}
+
+module.exports = { validateHelperCommand, buildElevatedLaunch, checkTargets, httpProbe, DEFAULT_TARGETS, MAX_ARGS, measureThroughput, parseDirectUrl, checkAll, detectVpn };

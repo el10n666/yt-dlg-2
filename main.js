@@ -24,7 +24,7 @@ const { cleanUrl } = require('./src/args');
 const { shouldWelcome, markWelcomed, welcomeText, findShortcuts } = require('./src/firstrun');
 const { loadSettings, saveSettings } = require('./src/settings');
 const { prepareZapret, listStrategies, parseStrategy, ensureUserLists, pickStrategy } = require('./src/zapret');
-const { buildElevatedLaunch, checkTargets } = require('./src/zapret-run');
+const { buildElevatedLaunch, checkAll, parseDirectUrl, detectVpn } = require('./src/zapret-run');
 const { createSession } = require('./src/zapret-session');
 
 let win;
@@ -183,6 +183,14 @@ async function zapretOn() {
   zBusy = true;
   zCancel = false;
   try {
+    // Под VPN обход бесполезен и мешает: трафик уже идёт в туннель мимо провайдера. Говорим об этом сразу, до запроса прав администратора.
+    const vpn = detectVpn(require('node:os').networkInterfaces());
+    if (vpn) {
+      saveSettings(app.getPath('userData'), { ...loadSettings(app.getPath('userData')), zapret: false });
+      zStatus('error', `Включён VPN (${vpn}). С VPN обход не нужен и не работает: выключите VPN или пользуйтесь только им`, { on: false });
+      return;
+    }
+
     zStatus('busy', 'Готовим обход блокировок…');
     const prep = prepareZapret({ bundledDir: zapretBundled(), userDir: zapretDir() });
     note(`zapret prepare: ${prep.action} ${prep.version}`);
@@ -190,6 +198,14 @@ async function zapretOn() {
     const dirs = { binDir: path.join(zapretDir(), 'bin'), listsDir: path.join(zapretDir(), 'lists') };
     const names = listStrategies(zapretDir());
     const argsOf = (name) => parseStrategy(fs.readFileSync(path.join(zapretDir(), `${name}.bat`), 'utf8'), dirs).args;
+
+    // Ссылка на настоящий видеопоток для проверки: без неё проверка видела бы только ответы сайтов, а не скачивание видео.
+    let videoUrl = null;
+    try {
+      const out = await run(resolveYtDlp({ bundledDir: bundledDir(), userDir: userDir() }), ['-g', '-f', 'bv*[vcodec^=avc1]/b', '--no-playlist', 'https://www.youtube.com/watch?v=jNQXAC9IVRw']);
+      videoUrl = parseDirectUrl(out);
+    } catch (e) { note(`zapret: не получена ссылка для проверки видео: ${e.message}`); }
+    note(`zapret: проверка видео ${videoUrl ? 'включена' : 'недоступна, проверяются только сайты'}`);
 
     zStatus('busy', 'Подтвердите запрос Windows…');
     zSession = createSession({ launch: launchElevated });
@@ -206,7 +222,8 @@ async function zapretOn() {
       },
       stop: async () => { if (zSession && zSession.alive) await zSession.request({ cmd: 'stop' }); },
       wait: () => new Promise((r) => setTimeout(r, 2500)), // драйверу нужно время, чтобы начать перехват
-      check: () => checkTargets(),
+      check: () => checkAll({ videoUrl }),
+      onAttempt: (a) => note(`zapret attempt ${a.name}: ${a.passed}/${a.total}${a.failed.length ? ` не прошло: ${a.failed.join(', ')}` : ''}`),
       onProgress: ({ index, total }) => zStatus('busy', `Подбираем настройку: ${index} из ${total}…`),
       isCancelled: () => zCancel,
     });
