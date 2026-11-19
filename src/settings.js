@@ -10,9 +10,10 @@ const SCHEMA = {
   playlist: 'boolean',
   outDir: 'string',
   zapret: 'boolean',
+  zapretStrategy: 'string', // последняя сработавшая стратегия: при следующем включении пробуется первой
 };
 
-const DEFAULTS = { cookiesBrowser: '', proxy: '', playlist: false, outDir: '', zapret: false };
+const DEFAULTS = { cookiesBrowser: '', proxy: '', playlist: false, outDir: '', zapret: false, zapretStrategy: '' };
 
 function sanitize(raw) {
   const out = { ...DEFAULTS };

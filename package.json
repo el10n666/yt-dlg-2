@@ -22,6 +22,10 @@
       {
         "from": "resources/bin",
         "to": "bin"
+      },
+      {
+        "from": "resources/zapret",
+        "to": "zapret"
       }
     ],
     "win": {

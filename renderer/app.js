@@ -96,7 +96,8 @@ const folderLabel = (p) => (p ? p.replace(/^.*[\\/]/, '') || p : 'Папка «�
 async function loadAdvanced() {
   const s = await window.api.getSettings();
   $('opt-playlist').checked = s.playlist;
-  $('opt-zapret').checked = s.zapret;
+  // Обход не включается сам при запуске: запрос администратора без действия пользователя пугает. Слайдер показывает «выключено».
+  $('opt-zapret').checked = false;
   $('opt-browser').value = s.cookiesBrowser;
   $('opt-proxy').value = s.proxy;
   $('opt-folder').textContent = folderLabel(s.outDir);
@@ -109,6 +110,27 @@ async function save(patch) {
 }
 
 $('opt-playlist').addEventListener('change', (e) => save({ playlist: e.target.checked }));
+
+// Слайдер обхода блокировок: включение долгое (запрос Windows и подбор), поэтому состояние приходит событиями из главного процесса.
+const ZAPRET_DEFAULT = 'Для YouTube и Discord. Windows спросит разрешение';
+function zapretSub(text, isError) {
+  $('zapret-sub').textContent = text;
+  $('zapret-sub').classList.toggle('err', Boolean(isError));
+}
+$('opt-zapret').addEventListener('change', async (e) => {
+  if (e.target.checked) {
+    $('opt-zapret').disabled = true;
+    zapretSub('Готовим обход блокировок…');
+    try { await window.api.zapretOn(); } catch { $('opt-zapret').checked = false; $('opt-zapret').disabled = false; zapretSub('Не удалось включить. Попробуйте ещё раз', true); }
+  } else {
+    try { await window.api.zapretOff(); } catch { zapretSub('Не удалось выключить. Закройте программу', true); }
+  }
+});
+window.api.onZapretStatus(({ state, text, on }) => {
+  if (typeof on === 'boolean') $('opt-zapret').checked = on;
+  $('opt-zapret').disabled = state === 'busy';
+  zapretSub(state === 'off' ? ZAPRET_DEFAULT : text, state === 'error');
+});
 $('opt-browser').addEventListener('change', (e) => save({ cookiesBrowser: e.target.value }));
 $('opt-proxy').addEventListener('change', (e) => save({ proxy: e.target.value.trim() }));
 $('opt-folder').addEventListener('click', async () => {

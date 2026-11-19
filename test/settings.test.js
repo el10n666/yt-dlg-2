@@ -13,7 +13,7 @@ test('defaults are returned when the file does not exist', () => {
 
 test('settings survive a save and load round trip, and the folder is created', () => {
   const dir = tmp();
-  const s = { cookiesBrowser: 'firefox', proxy: 'http://127.0.0.1:8080', playlist: true, outDir: 'D:\\Видео', zapret: true };
+  const s = { cookiesBrowser: 'firefox', proxy: 'http://127.0.0.1:8080', playlist: true, outDir: 'D:\\Видео', zapret: true, zapretStrategy: 'general (ALT11)' };
   saveSettings(dir, s);
   assert.deepStrictEqual(loadSettings(dir), s);
 });

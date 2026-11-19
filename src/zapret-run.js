@@ -6,9 +6,9 @@ const path = require('node:path');
 
 const MAX_ARGS = 300;
 const OPTION_RE = /^--[A-Za-z0-9-]+(=[^\u0000-\u001f"]*)?$/;
-// Опции, значением которых служит файл: путь обязан лежать внутри папки zapret.
-const FILE_OPTIONS = /^--(hostlist|hostlist-exclude|ipset|ipset-exclude|dpi-desync-fake-[a-z0-9-]+|dpi-desync-split-seqovl-pattern|dpi-desync-fakedsplit-pattern|dpi-desync-hostfakesplit-[a-z0-9-]+|debug|log|pidfile|wf-save)$/i;
-const looksLikePath = (v) => /^[A-Za-z]:[\\/]/.test(v) || v.startsWith('\\\\') || v.includes('..');
+// Решаем по значению, а не по имени опции: у winws одни и те же опции принимают и файл, и литерал (0x00, sni=..., !).
+// Всё, что похоже на путь (диск, UNC, \ или /, ..), обязано лежать внутри папки zapret; литералы без разделителей проходят.
+const looksLikePath = (v) => /^[A-Za-z]:/.test(v) || /[\\/]/.test(v) || v.includes('..');
 
 const w = path.win32;
 const norm = (p) => w.resolve(p).toLowerCase();
@@ -35,8 +35,8 @@ function validateHelperCommand(msg, { winws }) {
     const name = eq < 0 ? a : a.slice(0, eq);
     const value = eq < 0 ? '' : a.slice(eq + 1);
     if (value.startsWith('@')) throw new Error('Значения вида @файл запрещены');
-    if (FILE_OPTIONS.test(name) || looksLikePath(value)) {
-      if (!value || !insideRoot(value, root)) throw new Error(`Файл вне папки zapret: ${name}`);
+    if (looksLikePath(value) && !(/^[A-Za-z]:\\/.test(value) && insideRoot(value, root))) {
+      throw new Error(`Файл вне папки zapret: ${name}`);
     }
   }
   return { cmd: 'start', exe: winws, args: [...args] };

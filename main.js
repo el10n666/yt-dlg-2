@@ -2,11 +2,30 @@ const { app, BrowserWindow, ipcMain, clipboard, shell, dialog } = require('elect
 const { spawn, execFile } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+
+// Режим помощника zapret: та же программа, запущенная с правами администратора. Окна, единственного экземпляра и IPC нет,
+// только канал к приложению. Папка zapret вычисляется здесь же и из командной строки не берётся.
+const helperArg = process.argv.find((a) => a.startsWith('--zapret-pipe='));
+if (process.argv.includes('--zapret-helper') && helperArg) {
+  const pipePath = helperArg.slice('--zapret-pipe='.length);
+  app.whenReady().then(async () => {
+    const { runHelper } = require('./src/zapret-helper');
+    if (/^\\\\\.\\pipe\\yt-dlg-2-[0-9a-f]{24}$/.test(pipePath)) {
+      await runHelper({ pipePath, zapretDir: path.join(app.getPath('userData'), 'zapret') }).catch(() => {});
+    }
+    app.exit(0);
+  });
+  return; // eslint-disable-line no-useless-return -- дальше идёт только код обычного приложения
+}
+
 const { startDownload } = require('./src/downloader');
 const { resolveYtDlp, updateYtDlp } = require('./src/binaries');
 const { cleanUrl } = require('./src/args');
 const { shouldWelcome, markWelcomed, welcomeText, findShortcuts } = require('./src/firstrun');
 const { loadSettings, saveSettings } = require('./src/settings');
+const { prepareZapret, listStrategies, parseStrategy, ensureUserLists, pickStrategy } = require('./src/zapret');
+const { buildElevatedLaunch, checkTargets } = require('./src/zapret-run');
+const { createSession } = require('./src/zapret-session');
 
 let win;
 let isFull = false;
@@ -121,7 +140,112 @@ ipcMain.handle('report:save', () => {
   return file;
 });
 
-app.on('before-quit', () => { for (const j of active.values()) j.cancel(); });
+app.on('before-quit', () => {
+  for (const j of active.values()) j.cancel();
+  zapretOff().catch(() => {}); // при закрытии канал рвётся, и помощник сам останавливает winws и выгружает драйвер
+});
+
+// ---------- Обход блокировок (zapret) ----------
+
+const zapretBundled = () => (app.isPackaged ? path.join(process.resourcesPath, 'zapret') : path.join(__dirname, 'resources', 'zapret'));
+const zapretDir = () => path.join(app.getPath('userData'), 'zapret');
+let zSession = null;
+let zBusy = false;
+let zCancel = false;
+
+function zStatus(state, text, extra = {}) {
+  note(`zapret: ${state} ${text}`);
+  if (win && !win.isDestroyed()) win.webContents.send('zapret:status', { state, text, ...extra });
+}
+
+// Помощник это та же программа: в собранном приложении сам exe, при разработке electron с путём к проекту.
+function helperLaunch(pipe) {
+  const helperArgs = ['--zapret-helper', `--zapret-pipe=${pipe}`];
+  const exe = process.execPath;
+  const args = app.isPackaged ? helperArgs : [app.getAppPath(), ...helperArgs];
+  return buildElevatedLaunch({ exe, args });
+}
+
+function launchElevated({ pipe }) {
+  const l = helperLaunch(pipe);
+  return new Promise((resolve, reject) => {
+    execFile(l.file, l.args, { windowsHide: true }, (err, _out, stderr) => {
+      if (!err) return resolve();
+      const e = new Error(`Не удалось получить права администратора: ${String(stderr || err.message).trim()}`);
+      e.declined = /cancel|отмен/i.test(String(stderr)); // пользователь нажал «Нет» в окне Windows
+      reject(e);
+    });
+  });
+}
+
+async function zapretOn() {
+  if (zBusy) return;
+  zBusy = true;
+  zCancel = false;
+  try {
+    zStatus('busy', 'Готовим обход блокировок…');
+    const prep = prepareZapret({ bundledDir: zapretBundled(), userDir: zapretDir() });
+    note(`zapret prepare: ${prep.action} ${prep.version}`);
+    ensureUserLists(path.join(zapretDir(), 'lists'));
+    const dirs = { binDir: path.join(zapretDir(), 'bin'), listsDir: path.join(zapretDir(), 'lists') };
+    const names = listStrategies(zapretDir());
+    const argsOf = (name) => parseStrategy(fs.readFileSync(path.join(zapretDir(), `${name}.bat`), 'utf8'), dirs).args;
+
+    zStatus('busy', 'Подтвердите запрос Windows…');
+    zSession = createSession({ launch: launchElevated });
+    zSession.onExit((e) => zStatus('error', `Обход блокировок остановился (код ${e.code}). Включите заново`, { on: false }));
+    await zSession.open();
+
+    const settings = loadSettings(app.getPath('userData'));
+    const result = await pickStrategy({
+      names,
+      preferred: settings.zapretStrategy,
+      start: async (name) => {
+        const r = await zSession.request({ cmd: 'start', args: argsOf(name) });
+        if (!r.ok) throw new Error(r.error || 'не запустилась');
+      },
+      stop: async () => { if (zSession && zSession.alive) await zSession.request({ cmd: 'stop' }); },
+      wait: () => new Promise((r) => setTimeout(r, 2500)), // драйверу нужно время, чтобы начать перехват
+      check: () => checkTargets(),
+      onProgress: ({ index, total }) => zStatus('busy', `Подбираем настройку: ${index} из ${total}…`),
+      isCancelled: () => zCancel,
+    });
+
+    if (!result || result.cancelled) {
+      await zapretOff();
+      if (result && result.cancelled) return;
+      saveSettings(app.getPath('userData'), { ...loadSettings(app.getPath('userData')), zapret: false });
+      zStatus('error', 'Ни одна настройка не помогла. Обход выключен', { on: false });
+      return;
+    }
+    saveSettings(app.getPath('userData'), { ...loadSettings(app.getPath('userData')), zapret: true, zapretStrategy: result.name });
+    zStatus('on', result.partial ? `Включено частично (${result.name}): часть сайтов может не открываться` : `Включено (${result.name})`, { on: true });
+  } catch (e) {
+    note(`zapret error: ${e && e.stack}`);
+    await zapretOff();
+    saveSettings(app.getPath('userData'), { ...loadSettings(app.getPath('userData')), zapret: false });
+    zStatus('error', e && e.declined ? 'Вы отказали в разрешении. Обход выключен' : 'Не удалось включить обход блокировок. Нажмите «Сообщить о проблеме»', { on: false });
+  } finally {
+    zBusy = false;
+  }
+}
+
+async function zapretOff() {
+  zCancel = true;
+  const s = zSession;
+  zSession = null;
+  if (s) {
+    try { if (s.alive) await s.request({ cmd: 'stop' }); } catch { /* помощник уже завершился */ }
+    await s.close();
+  }
+}
+
+ipcMain.handle('zapret:on', () => { zapretOn(); return true; });
+ipcMain.handle('zapret:off', async () => {
+  await zapretOff();
+  saveSettings(app.getPath('userData'), { ...loadSettings(app.getPath('userData')), zapret: false });
+  zStatus('off', 'Выключено', { on: false });
+});
 
 // Первый запуск после установки: один раз объясняем, где лежат ярлыки. В режиме разработки не показываем.
 function welcomeOnce() {

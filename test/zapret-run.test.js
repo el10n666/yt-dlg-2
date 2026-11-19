@@ -27,6 +27,17 @@ test('validateHelperCommand rejects anything that is not a plain winws option', 
   for (const args of bad) assert.throws(() => r.validateHelperCommand({ cmd: 'start', args }, { winws: WINWS }), undefined, JSON.stringify(args));
 });
 
+test('validateHelperCommand accepts non-path values of options that can also take a file (real zapret strategies use them)', () => {
+  const args = ['--dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com', '--dpi-desync-fakedsplit-pattern=0x00', '--dpi-desync-hostfakesplit-mod=host=www.google.com', '--dpi-desync-fake-tls=!'];
+  assert.strictEqual(r.validateHelperCommand({ cmd: 'start', args }, { winws: WINWS }).cmd, 'start');
+});
+
+test('validateHelperCommand rejects any path-looking value outside the zapret folder, whatever the option name', () => {
+  for (const a of ['--dpi-desync-fake-tls=C:\\Users\\Иван\\x.bin', '--some-new-option=D:\\data.txt', '--x=\\\\server\\share\\f', '--x=bin/../../../secret', '--x=/etc/passwd']) {
+    assert.throws(() => r.validateHelperCommand({ cmd: 'start', args: [a] }, { winws: WINWS }), undefined, a);
+  }
+});
+
 test('validateHelperCommand only allows file options that point inside the zapret folder', () => {
   const ok = r.validateHelperCommand({ cmd: 'start', args: ['--hostlist=C:\\Users\\Иван\\AppData\\Roaming\\yt-dlg-2\\zapret\\lists\\list-general.txt'] }, { winws: WINWS });
   assert.strictEqual(ok.cmd, 'start');

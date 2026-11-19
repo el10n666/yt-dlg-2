@@ -138,6 +138,30 @@ test('settings are applied to downloads: folder from settings, never from the re
   assert.doesNotMatch(start, /outDir:\s*(url|mode|id)\b/);
 });
 
+test('main.js runs as the zapret helper when started with --zapret-helper, before any app setup', () => {
+  const helperAt = main.indexOf("'--zapret-helper'");
+  assert.ok(helperAt > 0, 'helper switch is handled');
+  assert.ok(helperAt < main.indexOf('requestSingleInstanceLock'), 'helper must not take the single-instance lock');
+  assert.ok(helperAt < main.indexOf("ipcMain.handle("), 'helper must not register app IPC');
+  assert.match(main, /runHelper\(/);
+});
+
+test('zapret slider is wired: on/off IPC, status events, elevated launch, quit on exit', () => {
+  for (const ch of ['zapret:on', 'zapret:off']) assert.match(main, new RegExp(`ipcMain\\.handle\\('${ch}'`), ch);
+  assert.match(main, /zapret:status/);
+  assert.match(main, /buildElevatedLaunch/);
+  assert.match(main, /pickStrategy/);
+  assert.match(main, /prepareZapret/);
+  assert.match(pre, /zapretOn/);
+  assert.match(pre, /zapretOff/);
+  assert.match(pre, /onZapretStatus/);
+  assert.match(app, /\$\('opt-zapret'\)\.addEventListener\('change'/);
+});
+
+test('zapret is bundled into the installer from resources/zapret', () => {
+  assert.ok(pkg.build.extraResources.some((r) => r.from === 'resources/zapret' && r.to === 'zapret'));
+});
+
 test('release is created as a draft to avoid the parallel-publisher 422 race', () => {
   assert.strictEqual(pkg.build.publish.releaseType, 'draft');
 });
